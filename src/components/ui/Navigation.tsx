@@ -10,7 +10,7 @@ export default function Navigation() {
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light mb-4">
       <div className="container">
-        <span className="navbar-brand">Image Processing Tools</span>
+        <span className="navbar-brand">图像处理工具</span>
         <div className="navbar-nav">
           {NAV_ITEMS.map((item) => (
             <Link

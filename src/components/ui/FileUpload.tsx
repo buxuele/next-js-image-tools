@@ -37,7 +37,7 @@ export default function FileUpload({
       }
 
       if (files.length > maxFiles) {
-        addMessage("error", `Maximum ${maxFiles} files allowed.`);
+        addMessage("error", `最多允许选择 ${maxFiles} 个文件。`);
         return false;
       }
 

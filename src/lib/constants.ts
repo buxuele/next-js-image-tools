@@ -53,8 +53,8 @@ export const FLASH_MESSAGE_TYPES = {
 
 // Navigation items
 export const NAV_ITEMS = [
-  { href: "/", label: "Dual Merge", key: "dual-merge" },
-  { href: "/multi-merge", label: "Multi Merge", key: "multi-merge" },
-  { href: "/icon-maker", label: "Icon Maker", key: "icon-maker" },
-  { href: "/file-diff", label: "File Diff", key: "file-diff" },
+  { href: "/", label: "双图合并", key: "dual-merge" },
+  { href: "/multi-merge", label: "多图合并", key: "multi-merge" },
+  { href: "/icon-maker", label: "图标制作", key: "icon-maker" },
+  { href: "/file-diff", label: "文件对比", key: "file-diff" },
 ];

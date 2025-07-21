@@ -14,7 +14,7 @@ export default function Home() {
 
   const handleFilesSelected = (files: File[]) => {
     if (files.length !== 2) {
-      addMessage("error", "Please select exactly 2 images for dual merge.");
+      addMessage("error", "请选择2张图片进行双图合并。");
       setSelectedFiles([]);
       return;
     }
@@ -24,7 +24,7 @@ export default function Home() {
 
   const handleMerge = async () => {
     if (selectedFiles.length !== 2) {
-      addMessage("error", "Please select exactly 2 images before merging.");
+      addMessage("error", "请先选择2张图片再进行合并。");
       return;
     }
 
@@ -45,13 +45,13 @@ export default function Home() {
 
       if (result.success) {
         setResultImage(result.data.image);
-        addMessage("success", "Images merged successfully!");
+        addMessage("success", "图片合并成功！");
       } else {
-        addMessage("error", result.error || "Failed to merge images.");
+        addMessage("error", result.error || "图片合并失败。");
       }
     } catch (error) {
       console.error("Error merging images:", error);
-      addMessage("error", "An error occurred while merging images.");
+      addMessage("error", "合并图片时发生错误。");
     } finally {
       setIsProcessing(false);
     }
@@ -71,12 +71,11 @@ export default function Home() {
           <div className="col-md-8">
             <div className="card">
               <div className="card-header">
-                <h4 className="mb-0">Dual Image Merge</h4>
+                <h4 className="mb-0">双图合并</h4>
               </div>
               <div className="card-body">
                 <p className="text-muted">
-                  Select exactly 2 images to merge them side by side. Optionally
-                  add text labels.
+                  选择2张图片进行左右合并，可选择添加文字标签。
                 </p>
 
                 <FileUpload
@@ -94,7 +93,7 @@ export default function Home() {
                     onChange={(e) => setAddTextLabels(e.target.checked)}
                   />
                   <label className="form-check-label" htmlFor="addTextLabels">
-                    Add text labels (修改前 / 修改后)
+                    添加文字标签 (修改前 / 修改后)
                   </label>
                 </div>
 
@@ -110,21 +109,21 @@ export default function Home() {
                         role="status"
                         aria-hidden="true"
                       ></span>
-                      Processing...
+                      处理中...
                     </>
                   ) : (
-                    "Merge Images"
+                    "合并图片"
                   )}
                 </button>
 
                 {resultImage && (
                   <div className="mt-4">
-                    <h5>Result:</h5>
+                    <h5>结果:</h5>
                     <div className="text-center mb-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={`data:image/png;base64,${resultImage}`}
-                        alt="Merged result"
+                        alt="合并结果"
                         className="img-fluid"
                         style={{
                           maxHeight: "400px",
@@ -136,7 +135,7 @@ export default function Home() {
                       className="btn btn-success btn-custom"
                       onClick={handleDownload}
                     >
-                      Download Merged Image
+                      下载合并图片
                     </button>
                   </div>
                 )}

@@ -5,9 +5,8 @@ import FlashMessages from "@/components/ui/FlashMessages";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Image Processing Tools",
-  description:
-    "A collection of image processing utilities - dual merge, multi-merge, icon maker, and file diff",
+  title: "图像处理工具",
+  description: "图像处理工具集合 - 双图合并、多图合并、图标制作和文件对比",
 };
 
 export default function RootLayout({
