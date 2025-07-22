@@ -14,10 +14,7 @@ export default function MultiMergePage() {
 
   const handleFilesSelected = (files: File[]) => {
     if (files.length < 2 || files.length > 6) {
-      addMessage(
-        "error",
-        "Please select between 2 and 6 images for multi merge."
-      );
+      addMessage("error", "请选择2到6张图片进行多图合并。");
       setSelectedFiles([]);
       return;
     }
@@ -30,10 +27,7 @@ export default function MultiMergePage() {
 
   const handleMerge = async () => {
     if (selectedFiles.length < 2 || selectedFiles.length > 6) {
-      addMessage(
-        "error",
-        "Please select between 2 and 6 images before merging."
-      );
+      addMessage("error", "请选择2到6张图片进行合并。");
       return;
     }
 
@@ -56,13 +50,13 @@ export default function MultiMergePage() {
 
       if (result.success) {
         setResultImage(result.data.image);
-        addMessage("success", "Images merged successfully!");
+        addMessage("success", "图片合并成功！");
       } else {
-        addMessage("error", result.error || "Failed to merge images.");
+        addMessage("error", result.error || "图片合并失败。");
       }
     } catch (error) {
       console.error("Error merging images:", error);
-      addMessage("error", "An error occurred while merging images.");
+      addMessage("error", "合并图片时发生错误。");
     } finally {
       setIsProcessing(false);
     }
@@ -81,15 +75,15 @@ export default function MultiMergePage() {
   const getLayoutDescription = (count: number) => {
     switch (count) {
       case 2:
-        return "horizontal layout (1×2)";
+        return "水平布局 (1×2)";
       case 3:
-        return "vertical layout (3×1)";
+        return "垂直布局 (3×1)";
       case 4:
-        return "grid layout (2×2)";
+        return "网格布局 (2×2)";
       case 5:
-        return "grid layout (2×3, with 1 empty slot)";
+        return "网格布局 (2×3, 1个空位)";
       case 6:
-        return "grid layout (2×3)";
+        return "网格布局 (2×3)";
       default:
         return "";
     }
@@ -103,12 +97,11 @@ export default function MultiMergePage() {
           <div className="col-md-8">
             <div className="card">
               <div className="card-header">
-                <h4 className="mb-0">Multi Image Merge</h4>
+                <h4 className="mb-0">多图合并</h4>
               </div>
               <div className="card-body">
                 <p className="text-muted">
-                  Select between 2 and 6 images to merge them in a layout.
-                  Images will be sorted alphabetically by filename.
+                  选择2到6张图片进行布局合并。 图片将按文件名字母顺序排序。
                 </p>
 
                 <FileUpload
@@ -119,9 +112,9 @@ export default function MultiMergePage() {
 
                 {selectedFiles.length > 0 && (
                   <div className="mb-3">
-                    <h6>Selected Files (in merge order):</h6>
+                    <h6>已选择文件 (合并顺序):</h6>
                     <div className="alert alert-info">
-                      <strong>{selectedFiles.length} images</strong> -{" "}
+                      <strong>{selectedFiles.length} 张图片</strong> -{" "}
                       {getLayoutDescription(selectedFiles.length)}
                     </div>
                     <ol className="list-group list-group-numbered">
@@ -133,7 +126,7 @@ export default function MultiMergePage() {
                           <div className="ms-2 me-auto">
                             <div className="fw-bold">{file.name}</div>
                             <small className="text-muted">
-                              Position {index + 1}
+                              位置 {index + 1}
                             </small>
                           </div>
                         </li>
@@ -154,7 +147,7 @@ export default function MultiMergePage() {
                     className="form-check-label"
                     htmlFor="addSequenceNumbers"
                   >
-                    Add sequence numbers (1, 2, 3...)
+                    添加序号 (1, 2, 3...)
                   </label>
                 </div>
 
@@ -174,16 +167,16 @@ export default function MultiMergePage() {
                         role="status"
                         aria-hidden="true"
                       ></span>
-                      Processing...
+                      处理中...
                     </>
                   ) : (
-                    "Merge Images"
+                    "合并图片"
                   )}
                 </button>
 
                 {resultImage && (
                   <div className="mt-4">
-                    <h5>Result:</h5>
+                    <h5>结果:</h5>
                     <div className="text-center mb-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -200,7 +193,7 @@ export default function MultiMergePage() {
                       className="btn btn-success btn-custom"
                       onClick={handleDownload}
                     >
-                      Download Merged Image
+                      下载合并图片
                     </button>
                   </div>
                 )}

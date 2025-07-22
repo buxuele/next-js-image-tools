@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import FileUpload from "@/components/ui/FileUpload";
+
+import CropOverlay from "@/components/image/CropOverlay";
 import { useFlashMessages } from "@/components/ui/FlashMessageProvider";
 import { createDownloadLink } from "@/lib/file-utils";
 import { ICON_SETTINGS } from "@/lib/constants";
@@ -26,11 +27,13 @@ export default function IconMakerPage() {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { addMessage } = useFlashMessages();
 
-  const handleFilesSelected = (files: File[]) => {
-    if (files.length !== 1) {
-      addMessage("error", "Please select exactly 1 image for icon creation.");
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length !== 1) {
+      addMessage("error", "请选择一张图片来制作图标。");
       return;
     }
 
@@ -86,9 +89,8 @@ export default function IconMakerPage() {
 
     setImageDimensions({ width, height });
 
-    // Set initial crop to center square
-    const minDimension = Math.min(width, height);
-    const size = Math.min(minDimension, ICON_SETTINGS.DEFAULT_CROP_SIZE);
+    // Set initial crop to 60% of image height (square)
+    const size = Math.min(height * 0.6, width * 0.6);
     const x = (width - size) / 2;
     const y = (height - size) / 2;
 
@@ -97,7 +99,7 @@ export default function IconMakerPage() {
 
   const handleGenerate = async () => {
     if (!selectedFile) {
-      addMessage("error", "Please select an image first.");
+      addMessage("error", "请先选择一张图片。");
       return;
     }
 
@@ -122,13 +124,13 @@ export default function IconMakerPage() {
           png: result.data.png,
           ico: result.data.ico,
         });
-        addMessage("success", "Icons generated successfully!");
+        addMessage("success", "图标生成成功！");
       } else {
-        addMessage("error", result.error || "Failed to generate icons.");
+        addMessage("error", result.error || "图标生成失败。");
       }
     } catch (error) {
       console.error("Error generating icons:", error);
-      addMessage("error", "An error occurred while generating icons.");
+      addMessage("error", "生成图标时发生错误。");
     } finally {
       setIsProcessing(false);
     }
@@ -154,26 +156,6 @@ export default function IconMakerPage() {
     }
   };
 
-  const updateCropParam = (param: "x" | "y" | "size", value: number) => {
-    setCropParams((prev) => {
-      const newParams = { ...prev, [param]: value };
-
-      // Ensure crop stays within image bounds
-      if (newParams.x < 0) newParams.x = 0;
-      if (newParams.y < 0) newParams.y = 0;
-      if (newParams.size < 10) newParams.size = 10;
-
-      if (newParams.x + newParams.size > imageDimensions.width) {
-        newParams.x = imageDimensions.width - newParams.size;
-      }
-      if (newParams.y + newParams.size > imageDimensions.height) {
-        newParams.y = imageDimensions.height - newParams.size;
-      }
-
-      return newParams;
-    });
-  };
-
   return (
     <>
       {/* Main content */}
@@ -182,97 +164,61 @@ export default function IconMakerPage() {
           <div className="col-md-10">
             <div className="card">
               <div className="card-header">
-                <h4 className="mb-0">Icon Maker</h4>
+                <h4 className="mb-0">图标制作</h4>
               </div>
               <div className="card-body">
                 <p className="text-muted">
-                  Upload an image and crop it to create PNG and ICO format
-                  icons.
+                  上传图片并裁剪以创建PNG和ICO格式的图标。
                 </p>
 
-                <FileUpload
-                  onFilesSelected={handleFilesSelected}
-                  maxFiles={1}
-                  className="mb-4"
-                />
+                <div className="mb-4">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleFileInputChange}
+                    style={{ display: "none" }}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    选择图片
+                  </button>
+                </div>
 
                 {imageUrl && (
                   <div className="row">
                     <div className="col-md-8">
-                      <h6>Original Image with Crop Selection:</h6>
-                      <div className="position-relative d-inline-block mb-3">
+                      <h6>原始图片及裁剪选择:</h6>
+                      <div className="mb-3">
+                        {/* Hidden image for loading and canvas reference */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           ref={imageRef}
                           src={imageUrl}
                           alt="Original"
-                          className="img-fluid"
-                          style={{ maxWidth: "100%", maxHeight: "400px" }}
+                          style={{ display: "none" }}
                           onLoad={handleImageLoad}
                         />
-                        {/* Crop overlay will be added in task 5.2 */}
-                      </div>
 
-                      <div className="row">
-                        <div className="col-md-4">
-                          <label className="form-label">X Position:</label>
-                          <input
-                            type="range"
-                            className="form-range"
-                            min="0"
-                            max={Math.max(
-                              0,
-                              imageDimensions.width - cropParams.size
-                            )}
-                            value={cropParams.x}
-                            onChange={(e) =>
-                              updateCropParam("x", parseInt(e.target.value))
-                            }
-                          />
-                          <small className="text-muted">{cropParams.x}px</small>
-                        </div>
-                        <div className="col-md-4">
-                          <label className="form-label">Y Position:</label>
-                          <input
-                            type="range"
-                            className="form-range"
-                            min="0"
-                            max={Math.max(
-                              0,
-                              imageDimensions.height - cropParams.size
-                            )}
-                            value={cropParams.y}
-                            onChange={(e) =>
-                              updateCropParam("y", parseInt(e.target.value))
-                            }
-                          />
-                          <small className="text-muted">{cropParams.y}px</small>
-                        </div>
-                        <div className="col-md-4">
-                          <label className="form-label">Size:</label>
-                          <input
-                            type="range"
-                            className="form-range"
-                            min="10"
-                            max={Math.min(
-                              imageDimensions.width,
-                              imageDimensions.height
-                            )}
-                            value={cropParams.size}
-                            onChange={(e) =>
-                              updateCropParam("size", parseInt(e.target.value))
-                            }
-                          />
-                          <small className="text-muted">
-                            {cropParams.size}px
-                          </small>
-                        </div>
+                        {imageDimensions.width > 0 &&
+                          imageDimensions.height > 0 && (
+                            <CropOverlay
+                              imageUrl={imageUrl}
+                              cropParams={cropParams}
+                              onCropChange={setCropParams}
+                              imageDimensions={imageDimensions}
+                              maxDisplayWidth={600}
+                              maxDisplayHeight={400}
+                            />
+                          )}
                       </div>
                     </div>
 
                     <div className="col-md-4">
                       <h6>
-                        Preview ({ICON_SETTINGS.PREVIEW_SIZE}×
+                        预览 ({ICON_SETTINGS.PREVIEW_SIZE}×
                         {ICON_SETTINGS.PREVIEW_SIZE}):
                       </h6>
                       <canvas
@@ -298,10 +244,10 @@ export default function IconMakerPage() {
                                 role="status"
                                 aria-hidden="true"
                               ></span>
-                              Generating...
+                              生成中...
                             </>
                           ) : (
-                            "Generate Icons"
+                            "生成图标"
                           )}
                         </button>
                       </div>
@@ -311,12 +257,12 @@ export default function IconMakerPage() {
 
                 {resultImages && (
                   <div className="mt-4">
-                    <h5>Generated Icons:</h5>
+                    <h5>生成的图标:</h5>
                     <div className="row">
                       <div className="col-md-6">
                         <div className="card">
                           <div className="card-body text-center">
-                            <h6>PNG Format</h6>
+                            <h6>PNG 格式</h6>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={`data:image/png;base64,${resultImages.png}`}
@@ -333,7 +279,7 @@ export default function IconMakerPage() {
                               className="btn btn-success btn-custom"
                               onClick={handleDownloadPng}
                             >
-                              Download PNG
+                              下载 PNG
                             </button>
                           </div>
                         </div>
@@ -341,7 +287,7 @@ export default function IconMakerPage() {
                       <div className="col-md-6">
                         <div className="card">
                           <div className="card-body text-center">
-                            <h6>ICO Format</h6>
+                            <h6>ICO 格式</h6>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={`data:image/x-icon;base64,${resultImages.ico}`}
@@ -358,7 +304,7 @@ export default function IconMakerPage() {
                               className="btn btn-success btn-custom"
                               onClick={handleDownloadIco}
                             >
-                              Download ICO
+                              下载 ICO
                             </button>
                           </div>
                         </div>

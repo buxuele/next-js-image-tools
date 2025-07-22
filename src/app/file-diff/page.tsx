@@ -13,7 +13,7 @@ export default function FileDiffPage() {
     const files = Array.from(e.target.files || []);
 
     if (files.length !== 2) {
-      addMessage("error", "Please select exactly 2 files for comparison.");
+      addMessage("error", "请选择2个文件进行比较。");
       setSelectedFiles([]);
       return;
     }
@@ -24,7 +24,7 @@ export default function FileDiffPage() {
 
   const handleCompare = async () => {
     if (selectedFiles.length !== 2) {
-      addMessage("error", "Please select exactly 2 files before comparing.");
+      addMessage("error", "请在比较前选择2个文件。");
       return;
     }
 
@@ -44,13 +44,13 @@ export default function FileDiffPage() {
 
       if (result.success) {
         setDiffResult(result.data.diff);
-        addMessage("success", "Files compared successfully!");
+        addMessage("success", "文件比较成功！");
       } else {
-        addMessage("error", result.error || "Failed to compare files.");
+        addMessage("error", result.error || "文件比较失败。");
       }
     } catch (error) {
       console.error("Error comparing files:", error);
-      addMessage("error", "An error occurred while comparing files.");
+      addMessage("error", "比较文件时发生错误。");
     } finally {
       setIsProcessing(false);
     }
@@ -70,16 +70,14 @@ export default function FileDiffPage() {
           <div className="col-md-10">
             <div className="card">
               <div className="card-header">
-                <h4 className="mb-0">File Diff</h4>
+                <h4 className="mb-0">文件对比</h4>
               </div>
               <div className="card-body">
-                <p className="text-muted">
-                  Select exactly 2 text files to compare their differences.
-                </p>
+                <p className="text-muted">选择2个文本文件来比较它们的差异。</p>
 
                 <div className="mb-3">
                   <label htmlFor="fileInput" className="form-label">
-                    Select Files:
+                    选择文件:
                   </label>
                   <input
                     id="fileInput"
@@ -90,14 +88,14 @@ export default function FileDiffPage() {
                     onChange={handleFileChange}
                   />
                   <small className="text-muted">
-                    Supports text files: TXT, MD, JS, TS, JSX, TSX, PY, JAVA,
-                    CPP, C, H, CSS, HTML, XML, JSON, YAML, YML
+                    支持的文本文件: TXT, MD, JS, TS, JSX, TSX, PY, JAVA, CPP, C,
+                    H, CSS, HTML, XML, JSON, YAML, YML
                   </small>
                 </div>
 
                 {selectedFiles.length > 0 && (
                   <div className="mb-3">
-                    <h6>Selected Files:</h6>
+                    <h6>已选择文件:</h6>
                     <div className="list-group">
                       {selectedFiles.map((file, index) => (
                         <div
@@ -105,7 +103,7 @@ export default function FileDiffPage() {
                           className="list-group-item d-flex justify-content-between align-items-center"
                         >
                           <div>
-                            <strong>File {index + 1}:</strong> {file.name}
+                            <strong>文件 {index + 1}:</strong> {file.name}
                             <small className="text-muted ms-2">
                               ({(file.size / 1024).toFixed(1)} KB)
                             </small>
@@ -115,7 +113,7 @@ export default function FileDiffPage() {
                             className="btn btn-sm btn-outline-danger"
                             onClick={() => removeFile(index)}
                           >
-                            Remove
+                            移除
                           </button>
                         </div>
                       ))}
@@ -135,16 +133,16 @@ export default function FileDiffPage() {
                         role="status"
                         aria-hidden="true"
                       ></span>
-                      Comparing...
+                      比较中...
                     </>
                   ) : (
-                    "Compare Files"
+                    "比较文件"
                   )}
                 </button>
 
                 {diffResult && (
                   <div className="mt-4">
-                    <h5>Comparison Result:</h5>
+                    <h5>比较结果:</h5>
                     <div
                       className="border p-3"
                       style={{
@@ -158,7 +156,7 @@ export default function FileDiffPage() {
                     />
                     <div className="mt-3">
                       <small className="text-muted">
-                        <strong>Legend:</strong>
+                        <strong>图例:</strong>
                         <span
                           className="ms-2"
                           style={{
@@ -166,7 +164,7 @@ export default function FileDiffPage() {
                             padding: "2px 4px",
                           }}
                         >
-                          Green = Added
+                          绿色 = 新增
                         </span>
                         <span
                           className="ms-2"
@@ -175,7 +173,7 @@ export default function FileDiffPage() {
                             padding: "2px 4px",
                           }}
                         >
-                          Red = Removed
+                          红色 = 删除
                         </span>
                         <span
                           className="ms-2"
@@ -184,7 +182,7 @@ export default function FileDiffPage() {
                             padding: "2px 4px",
                           }}
                         >
-                          Yellow = Changed
+                          黄色 = 修改
                         </span>
                       </small>
                     </div>

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 import { validateMultiMergeFiles } from "@/lib/validation";
 import { MERGE_LAYOUTS } from "@/lib/constants";
+import {
+  handleApiError,
+  ValidationError,
+  ImageProcessingError,
+} from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,23 +17,14 @@ export async function POST(request: NextRequest) {
     const addSequenceNumbers = formData.get("addSequenceNumbers") === "true";
 
     if (!fileCount || fileCount < 2 || fileCount > 6) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Please provide between 2 and 6 image files.",
-        },
-        { status: 400 }
-      );
+      throw new ValidationError("Please provide between 2 and 6 image files.");
     }
 
     const files: File[] = [];
     for (let i = 0; i < fileCount; i++) {
       const file = formData.get(`file${i}`) as File;
       if (!file) {
-        return NextResponse.json(
-          { success: false, error: `Missing file at position ${i}.` },
-          { status: 400 }
-        );
+        throw new ValidationError(`Missing file at position ${i}.`);
       }
       files.push(file);
     }
@@ -36,31 +32,35 @@ export async function POST(request: NextRequest) {
     // Validate files
     const validation = validateMultiMergeFiles(files);
     if (!validation.isValid) {
-      return NextResponse.json(
-        { success: false, error: validation.errors.join(", ") },
-        { status: 400 }
-      );
+      throw new ValidationError(validation.errors.join(", "));
     }
 
     // Get layout configuration
     const layout = MERGE_LAYOUTS[fileCount as keyof typeof MERGE_LAYOUTS];
     if (!layout) {
-      return NextResponse.json(
-        { success: false, error: "Unsupported number of files." },
-        { status: 400 }
-      );
+      throw new ValidationError("Unsupported number of files.");
     }
 
     // Convert files to buffers and get metadata
     const imageBuffers: Buffer[] = [];
     const imageMetadata: sharp.Metadata[] = [];
 
-    for (const file of files) {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      imageBuffers.push(buffer);
+    try {
+      for (const file of files) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        imageBuffers.push(buffer);
 
-      const metadata = await sharp(buffer).metadata();
-      imageMetadata.push(metadata);
+        const metadata = await sharp(buffer).metadata();
+        if (!metadata.width || !metadata.height) {
+          throw new ImageProcessingError(`Invalid image: ${file.name}`);
+        }
+        imageMetadata.push(metadata);
+      }
+    } catch (error) {
+      if (error instanceof ImageProcessingError) {
+        throw error;
+      }
+      throw new ImageProcessingError("Failed to process uploaded images.");
     }
 
     // Calculate target dimensions
@@ -97,41 +97,47 @@ export async function POST(request: NextRequest) {
     // Process images based on layout
     const processedImages: Buffer[] = [];
 
-    if (layout.type === "horizontal") {
-      // Resize all images to same height
-      for (let i = 0; i < files.length; i++) {
-        const resized = await sharp(imageBuffers[i])
-          .resize({ height: targetHeight, withoutEnlargement: true })
-          .png()
-          .toBuffer();
-        processedImages.push(resized);
-      }
-    } else if (layout.type === "vertical") {
-      // Resize all images to same width
-      for (let i = 0; i < files.length; i++) {
-        const resized = await sharp(imageBuffers[i])
-          .resize({ width: targetWidth, withoutEnlargement: true })
-          .png()
-          .toBuffer();
-        processedImages.push(resized);
-      }
-    } else {
-      // For grid layout, resize to fit cells
-      const cellWidth = targetWidth / layout.cols;
-      const cellHeight = targetHeight / layout.rows;
+    try {
+      if (layout.type === "horizontal") {
+        // Resize all images to same height
+        for (let i = 0; i < files.length; i++) {
+          const resized = await sharp(imageBuffers[i])
+            .resize({ height: targetHeight, withoutEnlargement: true })
+            .png()
+            .toBuffer();
+          processedImages.push(resized);
+        }
+      } else if (layout.type === "vertical") {
+        // Resize all images to same width
+        for (let i = 0; i < files.length; i++) {
+          const resized = await sharp(imageBuffers[i])
+            .resize({ width: targetWidth, withoutEnlargement: true })
+            .png()
+            .toBuffer();
+          processedImages.push(resized);
+        }
+      } else {
+        // For grid layout, resize to fit cells
+        const cellWidth = targetWidth / layout.cols;
+        const cellHeight = targetHeight / layout.rows;
 
-      for (let i = 0; i < files.length; i++) {
-        const resized = await sharp(imageBuffers[i])
-          .resize({
-            width: Math.floor(cellWidth),
-            height: Math.floor(cellHeight),
-            fit: "inside",
-            withoutEnlargement: true,
-          })
-          .png()
-          .toBuffer();
-        processedImages.push(resized);
+        for (let i = 0; i < files.length; i++) {
+          const resized = await sharp(imageBuffers[i])
+            .resize({
+              width: Math.floor(cellWidth),
+              height: Math.floor(cellHeight),
+              fit: "inside",
+              withoutEnlargement: true,
+            })
+            .png()
+            .toBuffer();
+          processedImages.push(resized);
+        }
       }
+    } catch {
+      throw new ImageProcessingError(
+        "Failed to resize images for multi-merge layout."
+      );
     }
 
     // Create composite operations
@@ -268,13 +274,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error in multi-merge API:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Internal server error during image processing.",
-      },
-      { status: 500 }
-    );
+    const { response, status } = handleApiError("multi-merge", error);
+    return NextResponse.json(response, { status });
   }
 }

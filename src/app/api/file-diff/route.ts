@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateTextFiles } from "@/lib/validation";
 import { generateHtmlDiffServer } from "@/lib/diff-utils";
+import {
+  handleApiError,
+  ValidationError,
+  FileProcessingError,
+} from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,12 +16,8 @@ export async function POST(request: NextRequest) {
     const file2 = formData.get("file2") as File;
 
     if (!file1 || !file2) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Please provide exactly 2 files for comparison.",
-        },
-        { status: 400 }
+      throw new ValidationError(
+        "Please provide exactly 2 files for comparison."
       );
     }
 
@@ -25,10 +26,7 @@ export async function POST(request: NextRequest) {
     // Validate files
     const validation = validateTextFiles(files);
     if (!validation.isValid) {
-      return NextResponse.json(
-        { success: false, error: validation.errors.join(", ") },
-        { status: 400 }
-      );
+      throw new ValidationError(validation.errors.join(", "));
     }
 
     // Read file contents
@@ -55,36 +53,26 @@ export async function POST(request: NextRequest) {
           text2 = new TextDecoder("latin1").decode(buffer2);
         }
       } catch {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Unable to decode file contents. Please ensure files are text files.",
-          },
-          { status: 400 }
+        throw new FileProcessingError(
+          "Unable to decode file contents. Please ensure files are text files."
         );
       }
     }
 
     // Check if files are too large for processing
     if (text1.length > 1000000 || text2.length > 1000000) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Files are too large for comparison. Maximum size is 1MB per file.",
-        },
-        { status: 400 }
+      throw new ValidationError(
+        "Files are too large for comparison. Maximum size is 1MB per file."
       );
     }
 
     // Generate HTML diff
-    const htmlDiff = generateHtmlDiffServer(
-      text1,
-      text2,
-      file1.name,
-      file2.name
-    );
+    let htmlDiff: string;
+    try {
+      htmlDiff = generateHtmlDiffServer(text1, text2, file1.name, file2.name);
+    } catch {
+      throw new FileProcessingError("Failed to generate file comparison.");
+    }
 
     // Calculate some statistics
     const lines1 = text1.split("\n").length;
@@ -113,13 +101,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error in file-diff API:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Internal server error during file comparison.",
-      },
-      { status: 500 }
-    );
+    const { response, status } = handleApiError("file-diff", error);
+    return NextResponse.json(response, { status });
   }
 }

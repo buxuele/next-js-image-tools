@@ -55,10 +55,7 @@ export default function FileUpload({
       if (handleFileValidation(fileArray)) {
         setSelectedFiles(fileArray);
         onFilesSelected(fileArray);
-        addMessage(
-          "success",
-          `${fileArray.length} file(s) selected successfully.`
-        );
+        addMessage("success", `成功选择了 ${fileArray.length} 个文件。`);
       }
     },
     [handleFileValidation, onFilesSelected, addMessage]
@@ -137,12 +134,10 @@ export default function FileUpload({
         <div className="text-center">
           <i className="bi bi-cloud-upload fs-1 text-muted"></i>
           <p className="mt-2">
-            {disabled
-              ? "Upload disabled"
-              : "Click to select images or drag and drop"}
+            {disabled ? "上传已禁用" : "点击选择图片或拖拽上传"}
           </p>
           <small className="text-muted">
-            Supports{" "}
+            支持{" "}
             {acceptedTypes
               .map((type) => type.split("/")[1].toUpperCase())
               .join(", ")}{" "}
@@ -153,7 +148,7 @@ export default function FileUpload({
 
       {selectedFiles.length > 0 && (
         <div className="selected-files mt-3">
-          <h6>Selected Files:</h6>
+          <h6>已选择文件:</h6>
           <div className="list-group">
             {selectedFiles.map((file, index) => (
               <div
@@ -174,7 +169,7 @@ export default function FileUpload({
                     removeFile(index);
                   }}
                 >
-                  Remove
+                  移除
                 </button>
               </div>
             ))}

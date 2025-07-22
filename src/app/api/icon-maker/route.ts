@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 import { validateImageFile, validateCropParameters } from "@/lib/validation";
 import { ICON_SETTINGS } from "@/lib/constants";
+import {
+  handleApiError,
+  ValidationError,
+  ImageProcessingError,
+  CropParameterError,
+} from "@/lib/errors";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,33 +20,37 @@ export async function POST(request: NextRequest) {
     const size = parseInt(formData.get("size") as string);
 
     if (!imageFile) {
-      return NextResponse.json(
-        { success: false, error: "Please provide an image file." },
-        { status: 400 }
-      );
+      throw new ValidationError("Please provide an image file.");
     }
 
     // Validate image file
     const fileValidation = validateImageFile(imageFile);
     if (!fileValidation.isValid) {
-      return NextResponse.json(
-        { success: false, error: fileValidation.errors.join(", ") },
-        { status: 400 }
-      );
+      throw new ValidationError(fileValidation.errors.join(", "));
     }
 
     // Convert file to buffer
-    const buffer = Buffer.from(await imageFile.arrayBuffer());
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(await imageFile.arrayBuffer());
+    } catch {
+      throw new ValidationError("Failed to read uploaded image file.");
+    }
 
     // Get image metadata
-    const image = sharp(buffer);
-    const metadata = await image.metadata();
+    let metadata: sharp.Metadata;
+    try {
+      const image = sharp(buffer);
+      metadata = await image.metadata();
 
-    if (!metadata.width || !metadata.height) {
-      return NextResponse.json(
-        { success: false, error: "Unable to read image dimensions." },
-        { status: 400 }
-      );
+      if (!metadata.width || !metadata.height) {
+        throw new ImageProcessingError("Unable to read image dimensions.");
+      }
+    } catch (error) {
+      if (error instanceof ImageProcessingError) {
+        throw error;
+      }
+      throw new ImageProcessingError("Invalid image format or corrupted file.");
     }
 
     // Validate crop parameters
@@ -52,37 +62,52 @@ export async function POST(request: NextRequest) {
       metadata.height
     );
     if (!cropValidation.isValid) {
-      return NextResponse.json(
-        { success: false, error: cropValidation.errors.join(", ") },
-        { status: 400 }
-      );
+      throw new CropParameterError(cropValidation.errors.join(", "), {
+        x,
+        y,
+        size,
+      });
     }
 
     // Crop the image to the specified square region
-    const croppedImage = await image
-      .extract({ left: x, top: y, width: size, height: size })
-      .png()
-      .toBuffer();
+    let croppedImage: Buffer;
+    try {
+      const image = sharp(buffer);
+      croppedImage = await image
+        .extract({ left: x, top: y, width: size, height: size })
+        .png()
+        .toBuffer();
+    } catch {
+      throw new ImageProcessingError(
+        "Failed to crop image with specified parameters."
+      );
+    }
 
     // Generate PNG format at 128x128 (standard icon size)
-    const pngIcon = await sharp(croppedImage)
-      .resize(ICON_SETTINGS.ICO_SIZE, ICON_SETTINGS.ICO_SIZE, {
-        fit: "fill",
-        kernel: sharp.kernel.lanczos3,
-      })
-      .png({ quality: 100, compressionLevel: 6 })
-      .toBuffer();
+    let pngIcon: Buffer;
+    let icoIcon: Buffer;
+    try {
+      pngIcon = await sharp(croppedImage)
+        .resize(ICON_SETTINGS.ICO_SIZE, ICON_SETTINGS.ICO_SIZE, {
+          fit: "fill",
+          kernel: sharp.kernel.lanczos3,
+        })
+        .png({ quality: 100, compressionLevel: 6 })
+        .toBuffer();
 
-    // Generate ICO format
-    // Note: Sharp doesn't directly support ICO format, so we'll create a PNG and
-    // let the client handle it as ICO (most browsers support PNG in ICO containers)
-    const icoIcon = await sharp(croppedImage)
-      .resize(ICON_SETTINGS.ICO_SIZE, ICON_SETTINGS.ICO_SIZE, {
-        fit: "fill",
-        kernel: sharp.kernel.lanczos3,
-      })
-      .png({ quality: 100, compressionLevel: 6 })
-      .toBuffer();
+      // Generate ICO format
+      // Note: Sharp doesn't directly support ICO format, so we'll create a PNG and
+      // let the client handle it as ICO (most browsers support PNG in ICO containers)
+      icoIcon = await sharp(croppedImage)
+        .resize(ICON_SETTINGS.ICO_SIZE, ICON_SETTINGS.ICO_SIZE, {
+          fit: "fill",
+          kernel: sharp.kernel.lanczos3,
+        })
+        .png({ quality: 100, compressionLevel: 6 })
+        .toBuffer();
+    } catch {
+      throw new ImageProcessingError("Failed to generate icon formats.");
+    }
 
     // Convert to base64 for response
     const base64Png = pngIcon.toString("base64");
@@ -99,13 +124,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error in icon-maker API:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Internal server error during icon generation.",
-      },
-      { status: 500 }
-    );
+    const { response, status } = handleApiError("icon-maker", error);
+    return NextResponse.json(response, { status });
   }
 }
