@@ -4,7 +4,7 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
-  background-color: #f8f9fa;
+  background-color: #fdf6f0;
 }
 
 /* Custom file upload styling */
@@ -15,6 +15,7 @@ body {
   text-align: center;
   transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
   cursor: pointer;
+  background-color: #fdf6f0;
 }
 
 .file-upload-area:hover:not(.disabled) {
@@ -113,6 +114,34 @@ body {
 .card {
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
   border: 1px solid rgba(0, 0, 0, 0.125);
+  background-color: #fdf6f0;
+}
+
+.card-header {
+  background-color: #fdf6f0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-body {
+  background-color: #fdf6f0;
+}
+
+/* Navigation styling */
+.navbar-dark .nav-link:not(.active):hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px;
+  color: #fff !important;
+}
+
+.navbar-dark .nav-link.active {
+  background-color: #0d6efd !important;
+  border-radius: 4px;
+  color: #fff !important;
+}
+
+.navbar-dark .navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
 }
 
 /* Responsive adjustments */

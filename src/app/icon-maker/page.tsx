@@ -159,38 +159,32 @@ export default function IconMakerPage() {
   return (
     <>
       {/* Main content */}
-      <div className="container">
-        <div className="row justify-content-center">
-          <div className="col-md-10">
+      <div
+        className="container-fluid"
+        style={{ width: "95%", margin: "0 auto" }}
+      >
+        <div className="row">
+          <div className="col-12">
             <div className="card">
               <div className="card-header">
-                <h4 className="mb-0">图标制作</h4>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleFileInputChange}
+                  style={{ display: "none" }}
+                />
+                <button
+                  className="btn btn-primary"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  请上传图片
+                </button>
               </div>
               <div className="card-body">
-                <p className="text-muted">
-                  上传图片并裁剪以创建PNG和ICO格式的图标。
-                </p>
-
-                <div className="mb-4">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    onChange={handleFileInputChange}
-                    style={{ display: "none" }}
-                  />
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    选择图片
-                  </button>
-                </div>
-
                 {imageUrl && (
-                  <div className="row">
-                    <div className="col-md-8">
-                      <h6>原始图片及裁剪选择:</h6>
+                  <div className="d-flex justify-content-center align-items-center gap-4">
+                    <div style={{ flex: "0 0 auto" }}>
                       <div className="mb-3">
                         {/* Hidden image for loading and canvas reference */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -209,47 +203,51 @@ export default function IconMakerPage() {
                               cropParams={cropParams}
                               onCropChange={setCropParams}
                               imageDimensions={imageDimensions}
-                              maxDisplayWidth={600}
-                              maxDisplayHeight={400}
+                              maxDisplayWidth={900}
+                              maxDisplayHeight={600}
                             />
                           )}
                       </div>
                     </div>
 
-                    <div className="col-md-4">
-                      <h6>
-                        预览 ({ICON_SETTINGS.PREVIEW_SIZE}×
-                        {ICON_SETTINGS.PREVIEW_SIZE}):
-                      </h6>
-                      <canvas
-                        ref={canvasRef}
-                        className="border"
-                        style={{
-                          width: `${ICON_SETTINGS.PREVIEW_SIZE}px`,
-                          height: `${ICON_SETTINGS.PREVIEW_SIZE}px`,
-                          maxWidth: "100%",
-                        }}
-                      />
-
-                      <div className="mt-3">
-                        <button
-                          className="btn btn-primary btn-custom w-100"
-                          disabled={!selectedFile || isProcessing}
-                          onClick={handleGenerate}
+                    <div style={{ flex: "0 0 auto" }}>
+                      <div className="text-center">
+                        <h6 className="mb-3">预览</h6>
+                        <canvas
+                          ref={canvasRef}
+                          className="border mb-3"
+                          style={{
+                            width: "525px",
+                            height: "525px",
+                            maxWidth: "100%",
+                          }}
+                        />
+                        <div
+                          style={{
+                            width: "525px",
+                            maxWidth: "100%",
+                            margin: "0 auto",
+                          }}
                         >
-                          {isProcessing ? (
-                            <>
-                              <span
-                                className="spinner-border spinner-border-sm me-2"
-                                role="status"
-                                aria-hidden="true"
-                              ></span>
-                              生成中...
-                            </>
-                          ) : (
-                            "生成图标"
-                          )}
-                        </button>
+                          <button
+                            className="btn btn-primary btn-custom w-100"
+                            disabled={!selectedFile || isProcessing}
+                            onClick={handleGenerate}
+                          >
+                            {isProcessing ? (
+                              <>
+                                <span
+                                  className="spinner-border spinner-border-sm me-2"
+                                  role="status"
+                                  aria-hidden="true"
+                                ></span>
+                                生成中...
+                              </>
+                            ) : (
+                              "下载"
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -269,8 +267,8 @@ export default function IconMakerPage() {
                               alt="PNG Icon"
                               className="mb-3"
                               style={{
-                                width: "128px",
-                                height: "128px",
+                                width: "192px",
+                                height: "192px",
                                 border: "1px solid #dee2e6",
                               }}
                             />
@@ -294,8 +292,8 @@ export default function IconMakerPage() {
                               alt="ICO Icon"
                               className="mb-3"
                               style={{
-                                width: "128px",
-                                height: "128px",
+                                width: "192px",
+                                height: "192px",
                                 border: "1px solid #dee2e6",
                               }}
                             />

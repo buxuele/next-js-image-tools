@@ -126,8 +126,11 @@ export default function Home() {
                         alt="合并结果"
                         className="img-fluid"
                         style={{
-                          maxHeight: "400px",
+                          maxHeight: "600px",
                           border: "1px solid #dee2e6",
+                          transform: "scale(1.5)",
+                          transformOrigin: "center",
+                          margin: "40px 0",
                         }}
                       />
                     </div>

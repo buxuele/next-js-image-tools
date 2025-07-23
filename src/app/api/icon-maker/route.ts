@@ -83,26 +83,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate PNG format at 128x128 (standard icon size)
+    // Generate PNG format using the actual cropped size (user selected size)
     let pngIcon: Buffer;
     let icoIcon: Buffer;
     try {
+      // Use the actual cropped size instead of fixed 128x128
       pngIcon = await sharp(croppedImage)
-        .resize(ICON_SETTINGS.ICO_SIZE, ICON_SETTINGS.ICO_SIZE, {
-          fit: "fill",
-          kernel: sharp.kernel.lanczos3,
-        })
         .png({ quality: 100, compressionLevel: 6 })
         .toBuffer();
 
-      // Generate ICO format
+      // Generate ICO format with the same actual size
       // Note: Sharp doesn't directly support ICO format, so we'll create a PNG and
       // let the client handle it as ICO (most browsers support PNG in ICO containers)
       icoIcon = await sharp(croppedImage)
-        .resize(ICON_SETTINGS.ICO_SIZE, ICON_SETTINGS.ICO_SIZE, {
-          fit: "fill",
-          kernel: sharp.kernel.lanczos3,
-        })
         .png({ quality: 100, compressionLevel: 6 })
         .toBuffer();
     } catch {
@@ -118,7 +111,7 @@ export async function POST(request: NextRequest) {
       data: {
         png: base64Png,
         ico: base64Ico,
-        size: ICON_SETTINGS.ICO_SIZE,
+        size: size, // Use actual cropped size instead of fixed ICO_SIZE
         cropArea: { x, y, size },
         originalDimensions: { width: metadata.width, height: metadata.height },
       },
