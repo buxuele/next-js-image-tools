@@ -80,6 +80,23 @@ export function validateMultiMergeFiles(files: File[]): ValidationResult {
   };
 }
 
+export function validateImageMergeFiles(files: File[]): ValidationResult {
+  const errors: string[] = [];
+
+  if (files.length < 2 || files.length > 6) {
+    errors.push("请选择2到6张图片进行拼接。");
+    return { isValid: false, errors };
+  }
+
+  const imageValidation = validateImageFiles(files);
+  errors.push(...imageValidation.errors);
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
 export function validateTextFiles(files: File[]): ValidationResult {
   const errors: string[] = [];
 

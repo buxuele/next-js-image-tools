@@ -123,7 +123,7 @@ export default function FileUpload({
       />
 
       <div
-        className={`file-upload-area ${isDragOver ? "dragover" : ""} ${
+        className={`file-upload-area compact ${isDragOver ? "dragover" : ""} ${
           disabled ? "disabled" : ""
         }`}
         onClick={handleClick}
@@ -132,50 +132,10 @@ export default function FileUpload({
         onDrop={handleDrop}
       >
         <div className="text-center">
-          <i className="bi bi-cloud-upload fs-1 text-muted"></i>
-          <p className="mt-2">
-            {disabled ? "上传已禁用" : "点击选择图片或拖拽上传"}
-          </p>
-          <small className="text-muted">
-            支持{" "}
-            {acceptedTypes
-              .map((type) => type.split("/")[1].toUpperCase())
-              .join(", ")}{" "}
-            (max {formatFileSize(maxFileSize)} each)
-          </small>
+          <i className="bi bi-cloud-upload fs-2 text-muted"></i>
+          {disabled && <p className="mt-2 mb-0 text-muted">上传已禁用</p>}
         </div>
       </div>
-
-      {selectedFiles.length > 0 && (
-        <div className="selected-files mt-3">
-          <h6>已选择文件:</h6>
-          <div className="list-group">
-            {selectedFiles.map((file, index) => (
-              <div
-                key={index}
-                className="list-group-item d-flex justify-content-between align-items-center"
-              >
-                <div>
-                  <strong>{file.name}</strong>
-                  <small className="text-muted ms-2">
-                    ({formatFileSize(file.size)})
-                  </small>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-danger"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFile(index);
-                  }}
-                >
-                  移除
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

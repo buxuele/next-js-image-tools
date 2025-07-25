@@ -3,6 +3,7 @@ import {
   validateImageFiles,
   validateDualMergeFiles,
   validateMultiMergeFiles,
+  validateImageMergeFiles,
   validateTextFiles,
   validateCropParameters,
 } from "@/lib/validation";
@@ -115,6 +116,38 @@ describe("Validation Functions", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors[0]).toContain("between 2 and 6 images");
+    });
+  });
+
+  describe("validateImageMergeFiles", () => {
+    it("should validate 3 image files", () => {
+      const files = [
+        createMockFile("test1.png", "image/png"),
+        createMockFile("test2.jpg", "image/jpeg"),
+        createMockFile("test3.gif", "image/gif"),
+      ];
+      const result = validateImageMergeFiles(files);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("should reject when less than 2 files", () => {
+      const files = [createMockFile("test1.png", "image/png")];
+      const result = validateImageMergeFiles(files);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors[0]).toContain("请选择2到6张图片进行拼接");
+    });
+
+    it("should reject when more than 6 files", () => {
+      const files = Array.from({ length: 7 }, (_, i) =>
+        createMockFile(`test${i}.png`, "image/png")
+      );
+      const result = validateImageMergeFiles(files);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors[0]).toContain("请选择2到6张图片进行拼接");
     });
   });
 

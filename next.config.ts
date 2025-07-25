@@ -56,30 +56,31 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Webpack optimization
+  // Webpack optimization (only for production builds)
   webpack: (config, { dev, isServer }) => {
+    // Skip webpack config in development when using turbopack
+    if (dev) return config;
+
     // Production optimizations
-    if (!dev) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: "all",
-          cacheGroups: {
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: "vendors",
-              chunks: "all",
-            },
-            sharp: {
-              test: /[\\/]node_modules[\\/]sharp[\\/]/,
-              name: "sharp",
-              chunks: "all",
-              priority: 10,
-            },
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: "all",
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: "vendors",
+            chunks: "all",
+          },
+          sharp: {
+            test: /[\\/]node_modules[\\/]sharp[\\/]/,
+            name: "sharp",
+            chunks: "all",
+            priority: 10,
           },
         },
-      };
-    }
+      },
+    };
 
     // Optimize Sharp for server-side usage
     if (isServer) {

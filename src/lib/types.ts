@@ -29,6 +29,8 @@ export interface MergeLayout {
   cols: number;
 }
 
+export type MergeDirection = "horizontal" | "vertical" | "grid";
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;

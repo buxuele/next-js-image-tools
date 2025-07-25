@@ -1,256 +1,216 @@
 import { NextRequest, NextResponse } from "next/server";
-import sharp from "sharp";
-import { validateDualMergeFiles } from "@/lib/validation";
-import { DUAL_MERGE_LABELS } from "@/lib/constants";
+import {
+  createCanvas,
+  loadImage,
+  Canvas,
+  CanvasRenderingContext2D,
+} from "canvas";
+import { validateImageMergeFiles } from "@/lib/validation";
+import { DUAL_MERGE_LABELS, GRID_LAYOUTS } from "@/lib/constants";
+import { MergeDirection } from "@/lib/types";
 import {
   handleApiError,
   ValidationError,
   ImageProcessingError,
 } from "@/lib/errors";
 
+interface ImageInfo {
+  buffer: Buffer;
+  width: number;
+  height: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
 
     // Extract files and options
-    const files: File[] = [];
-    const file1 = formData.get("file1") as File;
-    const file2 = formData.get("file2") as File;
+    const fileCount = parseInt(formData.get("fileCount") as string);
+    const mergeDirection =
+      (formData.get("mergeDirection") as MergeDirection) || "horizontal";
     const addTextLabels = formData.get("addTextLabels") === "true";
 
-    if (!file1 || !file2) {
-      throw new ValidationError("Please provide exactly 2 image files.");
+    if (!fileCount || fileCount < 2 || fileCount > 6) {
+      throw new ValidationError("请提供2到6张图片进行拼接。");
     }
 
-    files.push(file1, file2);
+    const files: File[] = [];
+    for (let i = 0; i < fileCount; i++) {
+      const file = formData.get(`file${i}`) as File;
+      if (!file) {
+        throw new ValidationError(`缺少第${i + 1}张图片。`);
+      }
+      files.push(file);
+    }
 
     // Validate files
-    const validation = validateDualMergeFiles(files);
+    const validation = validateImageMergeFiles(files);
     if (!validation.isValid) {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    // Convert files to buffers
-    let buffer1: Buffer, buffer2: Buffer;
+    // Load images using Canvas
+    const images: ImageInfo[] = [];
+
     try {
-      buffer1 = Buffer.from(await file1.arrayBuffer());
-      buffer2 = Buffer.from(await file2.arrayBuffer());
-    } catch {
-      throw new ValidationError("Failed to read uploaded files.");
-    }
-
-    // Get image metadata
-    let metadata1: sharp.Metadata, metadata2: sharp.Metadata;
-    try {
-      const image1 = sharp(buffer1);
-      const image2 = sharp(buffer2);
-
-      [metadata1, metadata2] = await Promise.all([
-        image1.metadata(),
-        image2.metadata(),
-      ]);
-
-      if (
-        !metadata1.width ||
-        !metadata1.height ||
-        !metadata2.width ||
-        !metadata2.height
-      ) {
-        throw new ImageProcessingError("Unable to read image dimensions.");
+      for (const file of files) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const img = await loadImage(buffer);
+        images.push({
+          buffer,
+          width: img.width,
+          height: img.height,
+        });
       }
     } catch (error) {
-      if (error instanceof ImageProcessingError) {
-        throw error;
-      }
-      throw new ImageProcessingError(
-        "Invalid image format or corrupted files."
-      );
+      throw new ImageProcessingError("加载图片失败。");
     }
 
-    // Calculate target height (use the smaller height)
-    const targetHeight = Math.min(metadata1.height, metadata2.height);
+    // Calculate canvas dimensions based on merge direction
+    let canvasWidth: number;
+    let canvasHeight: number;
+    let labelHeight = 0;
 
-    // Resize images to same height while maintaining aspect ratio
-    let resizedImage1: Buffer, resizedImage2: Buffer;
-    try {
-      const image1 = sharp(buffer1);
-      const image2 = sharp(buffer2);
-
-      resizedImage1 = await image1
-        .resize({ height: targetHeight, withoutEnlargement: true })
-        .png()
-        .toBuffer();
-
-      resizedImage2 = await image2
-        .resize({ height: targetHeight, withoutEnlargement: true })
-        .png()
-        .toBuffer();
-    } catch {
-      throw new ImageProcessingError("Failed to resize images for merging.");
+    if (addTextLabels && fileCount === 2 && mergeDirection === "horizontal") {
+      labelHeight = 40;
     }
 
-    // Get dimensions of resized images
-    let resizedMeta1: sharp.Metadata, resizedMeta2: sharp.Metadata;
-    try {
-      [resizedMeta1, resizedMeta2] = await Promise.all([
-        sharp(resizedImage1).metadata(),
-        sharp(resizedImage2).metadata(),
-      ]);
+    if (mergeDirection === "horizontal") {
+      // For horizontal: same height, sum widths
+      const targetHeight = Math.min(...images.map((img) => img.height));
+      canvasHeight = targetHeight + labelHeight;
 
-      if (!resizedMeta1.width || !resizedMeta2.width) {
-        throw new ImageProcessingError(
-          "Failed to get resized image dimensions."
-        );
+      // Calculate proportional widths
+      canvasWidth = images.reduce((sum, img) => {
+        const proportionalWidth = (img.width * targetHeight) / img.height;
+        return sum + proportionalWidth;
+      }, 0);
+    } else if (mergeDirection === "vertical") {
+      // For vertical: same width, sum heights
+      const targetWidth = Math.min(...images.map((img) => img.width));
+      canvasWidth = targetWidth;
+
+      // Calculate proportional heights
+      canvasHeight = images.reduce((sum, img) => {
+        const proportionalHeight = (img.height * targetWidth) / img.width;
+        return sum + proportionalHeight;
+      }, 0);
+    } else {
+      // Grid layout
+      const layout = GRID_LAYOUTS[fileCount as keyof typeof GRID_LAYOUTS];
+      if (!layout) {
+        throw new ValidationError("不支持的图片数量。");
       }
-    } catch (error) {
-      if (error instanceof ImageProcessingError) {
-        throw error;
-      }
-      throw new ImageProcessingError("Failed to process resized images.");
+
+      const maxWidth = Math.max(...images.map((img) => img.width));
+      const maxHeight = Math.max(...images.map((img) => img.height));
+
+      const cellWidth = Math.min(maxWidth, 400);
+      const cellHeight = Math.min(maxHeight, 400);
+
+      canvasWidth = cellWidth * layout.cols;
+      canvasHeight = cellHeight * layout.rows;
     }
 
-    const width1 = resizedMeta1.width;
-    const width2 = resizedMeta2.width;
-    const totalWidth = width1 + width2;
+    // Create canvas
+    const canvas = createCanvas(
+      Math.floor(canvasWidth),
+      Math.floor(canvasHeight)
+    );
+    const ctx = canvas.getContext("2d");
 
-    let mergedImage: Buffer;
+    // Fill with white background
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
+    // Draw images based on merge direction
     try {
-      if (addTextLabels) {
-        // Add text labels
-        const labelHeight = 40;
-        const totalHeightWithLabels = targetHeight + labelHeight;
+      if (mergeDirection === "horizontal") {
+        const targetHeight = Math.min(...images.map((img) => img.height));
+        let currentX = 0;
 
-        // Create label images
-        const label1Buffer = await sharp({
-          create: {
-            width: width1,
-            height: labelHeight,
-            channels: 3,
-            background: { r: 255, g: 255, b: 255 },
-          },
-        })
-          .composite([
-            {
-              input:
-                Buffer.from(`<svg width="${width1}" height="${labelHeight}">
-            <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" 
-                  font-family="Arial, sans-serif" font-size="16" fill="black">
-              ${DUAL_MERGE_LABELS.BEFORE}
-            </text>
-          </svg>`),
-              top: 0,
-              left: 0,
-            },
-          ])
-          .png()
-          .toBuffer();
+        // Draw text labels if requested
+        if (addTextLabels && fileCount === 2) {
+          ctx.fillStyle = "black";
+          ctx.font = "16px Arial";
+          ctx.textAlign = "center";
 
-        const label2Buffer = await sharp({
-          create: {
-            width: width2,
-            height: labelHeight,
-            channels: 3,
-            background: { r: 255, g: 255, b: 255 },
-          },
-        })
-          .composite([
-            {
-              input:
-                Buffer.from(`<svg width="${width2}" height="${labelHeight}">
-            <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" 
-                  font-family="Arial, sans-serif" font-size="16" fill="black">
-              ${DUAL_MERGE_LABELS.AFTER}
-            </text>
-          </svg>`),
-              top: 0,
-              left: 0,
-            },
-          ])
-          .png()
-          .toBuffer();
+          const img1Width = (images[0].width * targetHeight) / images[0].height;
+          const img2Width = (images[1].width * targetHeight) / images[1].height;
 
-        // Merge labels horizontally
-        const mergedLabels = await sharp({
-          create: {
-            width: totalWidth,
-            height: labelHeight,
-            channels: 3,
-            background: { r: 255, g: 255, b: 255 },
-          },
-        })
-          .composite([
-            { input: label1Buffer, top: 0, left: 0 },
-            { input: label2Buffer, top: 0, left: width1 },
-          ])
-          .png()
-          .toBuffer();
+          ctx.fillText(DUAL_MERGE_LABELS.BEFORE, img1Width / 2, 25);
+          ctx.fillText(DUAL_MERGE_LABELS.AFTER, img1Width + img2Width / 2, 25);
+        }
 
-        // Merge images horizontally
-        const mergedImagesOnly = await sharp({
-          create: {
-            width: totalWidth,
-            height: targetHeight,
-            channels: 3,
-            background: { r: 255, g: 255, b: 255 },
-          },
-        })
-          .composite([
-            { input: resizedImage1, top: 0, left: 0 },
-            { input: resizedImage2, top: 0, left: width1 },
-          ])
-          .png()
-          .toBuffer();
+        // Draw images
+        for (let i = 0; i < images.length; i++) {
+          const img = await loadImage(images[i].buffer);
+          const scaledWidth =
+            (images[i].width * targetHeight) / images[i].height;
 
-        // Combine labels and images vertically
-        mergedImage = await sharp({
-          create: {
-            width: totalWidth,
-            height: totalHeightWithLabels,
-            channels: 3,
-            background: { r: 255, g: 255, b: 255 },
-          },
-        })
-          .composite([
-            { input: mergedLabels, top: 0, left: 0 },
-            { input: mergedImagesOnly, top: labelHeight, left: 0 },
-          ])
-          .png()
-          .toBuffer();
+          ctx.drawImage(img, currentX, labelHeight, scaledWidth, targetHeight);
+
+          currentX += scaledWidth;
+        }
+      } else if (mergeDirection === "vertical") {
+        const targetWidth = Math.min(...images.map((img) => img.width));
+        let currentY = 0;
+
+        for (let i = 0; i < images.length; i++) {
+          const img = await loadImage(images[i].buffer);
+          const scaledHeight =
+            (images[i].height * targetWidth) / images[i].width;
+
+          ctx.drawImage(img, 0, currentY, targetWidth, scaledHeight);
+
+          currentY += scaledHeight;
+        }
       } else {
-        // Merge images horizontally without labels
-        mergedImage = await sharp({
-          create: {
-            width: totalWidth,
-            height: targetHeight,
-            channels: 3,
-            background: { r: 255, g: 255, b: 255 },
-          },
-        })
-          .composite([
-            { input: resizedImage1, top: 0, left: 0 },
-            { input: resizedImage2, top: 0, left: width1 },
-          ])
-          .png()
-          .toBuffer();
+        // Grid layout
+        const layout = GRID_LAYOUTS[fileCount as keyof typeof GRID_LAYOUTS];
+        const cellWidth = canvasWidth / layout.cols;
+        const cellHeight = canvasHeight / layout.rows;
+
+        for (let i = 0; i < images.length; i++) {
+          const img = await loadImage(images[i].buffer);
+          const row = Math.floor(i / layout.cols);
+          const col = i % layout.cols;
+
+          // Calculate scaled dimensions to fit in cell
+          const scaleX = cellWidth / images[i].width;
+          const scaleY = cellHeight / images[i].height;
+          const scale = Math.min(scaleX, scaleY);
+
+          const scaledWidth = images[i].width * scale;
+          const scaledHeight = images[i].height * scale;
+
+          // Center in cell
+          const x = col * cellWidth + (cellWidth - scaledWidth) / 2;
+          const y = row * cellHeight + (cellHeight - scaledHeight) / 2;
+
+          ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+        }
       }
-    } catch {
-      throw new ImageProcessingError("Failed to merge images.");
+    } catch (error) {
+      throw new ImageProcessingError("绘制图片失败。");
     }
 
-    // Convert to base64 for response
-    const base64Image = mergedImage.toString("base64");
+    // Convert canvas to buffer and then to base64
+    const buffer = canvas.toBuffer("image/png");
+    const base64Image = buffer.toString("base64");
 
     return NextResponse.json({
       success: true,
       data: {
         image: base64Image,
-        filename: `merged_${Date.now()}.png`,
+        filename: `merged_${fileCount}_${mergeDirection}_${Date.now()}.png`,
         mimeType: "image/png",
+        mergeDirection,
+        dimensions: `${Math.floor(canvasWidth)}x${Math.floor(canvasHeight)}`,
       },
     });
   } catch (error) {
-    const { response, status } = handleApiError("dual-merge", error);
+    const { response, status } = handleApiError("image-merge", error);
     return NextResponse.json(response, { status });
   }
 }

@@ -35,8 +35,7 @@ describe("Navigation Component", () => {
   it("renders all navigation items", () => {
     render(<Navigation />);
 
-    expect(screen.getByText("双图合并")).toBeInTheDocument();
-    expect(screen.getByText("多图合并")).toBeInTheDocument();
+    expect(screen.getByText("图片拼接")).toBeInTheDocument();
     expect(screen.getByText("图标制作")).toBeInTheDocument();
     expect(screen.getByText("文件对比")).toBeInTheDocument();
   });
@@ -44,35 +43,31 @@ describe("Navigation Component", () => {
   it("applies active class to current page", () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { usePathname } = require("next/navigation");
-    usePathname.mockReturnValue("/multi-merge");
+    usePathname.mockReturnValue("/");
 
     render(<Navigation />);
 
-    const multiMergeLink = screen.getByText("多图合并").closest("a");
-    expect(multiMergeLink).toHaveClass("active");
+    const imageMergeLink = screen.getByText("图片拼接").closest("a");
+    expect(imageMergeLink).toHaveClass("nav-link", "px-3", "active");
   });
 
   it("does not apply active class to non-current pages", () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { usePathname } = require("next/navigation");
-    usePathname.mockReturnValue("/");
+    usePathname.mockReturnValue("/icon-maker");
 
     render(<Navigation />);
 
-    const multiMergeLink = screen.getByText("多图合并").closest("a");
-    expect(multiMergeLink).not.toHaveClass("active");
+    const imageMergeLink = screen.getByText("图片拼接").closest("a");
+    expect(imageMergeLink).not.toHaveClass("active");
   });
 
   it("has correct href attributes", () => {
     render(<Navigation />);
 
-    expect(screen.getByText("双图合并").closest("a")).toHaveAttribute(
+    expect(screen.getByText("图片拼接").closest("a")).toHaveAttribute(
       "href",
       "/"
-    );
-    expect(screen.getByText("多图合并").closest("a")).toHaveAttribute(
-      "href",
-      "/multi-merge"
     );
     expect(screen.getByText("图标制作").closest("a")).toHaveAttribute(
       "href",
